@@ -8,6 +8,7 @@
 #include <cmath>
 #include <climits>
 #include "tardis.h"
+#include "trw-s.h"
 using namespace std;
 
 
@@ -18,37 +19,10 @@ typedef unsigned int TYPE;
 #define MAX_NUM -1 
 
 const int BP_ITERATIONS = 40;
-const int LABELS = 16;
 const int LAMBDA = 16;
 const int SMOOTHNESS_TRUNC = 2;
 const int BORDER_SZ = 18;
 
-struct Node {
-   // Each vertex has 4 messages from its 
-   // right/left/up/down edges and a data cost. 
-   uint8_t left[LABELS];
-   uint8_t right[LABELS];
-   uint8_t up[LABELS];
-   uint8_t down[LABELS];
-
-};
-
-typedef uint8_t label_t[LABELS];
-
-struct Field{
-    int width, height;
-    label_t* data;
-    Node* array;
-    uint8_t* assignment;
-};
-
-struct FieldPackage{
-    int width, height;
-    uint64_t data;
-    uint64_t array;
-    uint64_t assignment;
-    uint64_t size;
-};
 
 FieldPackage* InitGraph(const char* vdata_file, Field &mrf); 
 FieldPackage* splitGraph(Field mrf, int hSplits, int vSplits, Field* fields);
@@ -77,14 +51,11 @@ int main(int argc, char* argv[]) {
     stealTardis();
     #pragma omp parallel for
     for(int h = 0; h < 2*2; h++){
-        for(int i=0; i < BP_ITERATIONS; i++) {
+        for(int i=0; i < 10; i++) {
             cout << "Iteration: " << i << endl;
 
-            BP(fields[h], RIGHT, i);
-            BP(fields[h], LEFT, i);
-            BP(fields[h], UP, i);
-            BP(fields[h], DOWN, i);
             //TODO: print each iteration
+            trws(fields[h]);
         }
     }
     returnTardis();
@@ -99,7 +70,9 @@ int main(int argc, char* argv[]) {
         sprintf(buffer,"%d",i);
         WriteResultsRaw((string("section") + string(buffer)).c_str(),fields[i]);
     }
+    
     mergeGraph(mrf, 2, 2, fields);
+
     // Assign labels 
     TYPE energy = MAP(mrf);
     
@@ -127,17 +100,17 @@ FieldPackage* InitGraph(const char* vdata_file, Field &mrf) {
     mrf.height = height; 
 
     uint32_t pixelCount = width * height;
-    uint32_t size = sizeof(FieldPackage) + pixelCount * LABELS * (1+4+1); //TODO: calc size requirements
+    uint32_t size = sizeof(FieldPackage) + pixelCount *(sizeof(label_t) + sizeof(Node)) + pixelCount; //TODO: calc size requirements
     // Allocate array of size width x height
     uint32_t tmp = sizeof(FieldPackage);
     cerr << "mrf size:" << sizeof(Field) << endl;
     FieldPackage* fieldPackage = (FieldPackage*)malloc(size);
     fieldPackage->data = tmp;
-    tmp += pixelCount * LABELS;
+    tmp += pixelCount * sizeof(label_t);
     fieldPackage->array = tmp;
-    tmp += pixelCount * LABELS * 4;
+    tmp += pixelCount * sizeof(Node);
     fieldPackage->assignment = tmp;
-    tmp += pixelCount * LABELS;
+    tmp += pixelCount;
     fieldPackage->size = size;
     assert(tmp == size);
     mrf.data = (label_t*)((uint8_t*)fieldPackage + fieldPackage->data);
@@ -215,7 +188,7 @@ FieldPackage* splitGraph(Field mrf, int hSplits, int vSplits, Field* fields){
             //TODO: allocate Field package
             int width = vCuts[j+1] - vCuts[j] + overlap*2;
             int pixelCount = height*width;
-            totalSize += sizeof(FieldPackage) + pixelCount*LABELS*(1+4+1);
+            totalSize += sizeof(FieldPackage) + pixelCount*(sizeof(label_t) + sizeof(Node)) + pixelCount;
         }
     }
     uint8_t* memory = (uint8_t*)malloc(totalSize);
@@ -239,11 +212,11 @@ FieldPackage* splitGraph(Field mrf, int hSplits, int vSplits, Field* fields){
             subLocation = sizeof(FieldPackage);
             fp->data = subLocation;
             //TODO: setup fields first
-            subLocation += pixelCount*LABELS;
+            subLocation += pixelCount*sizeof(label_t);
             fp->array = subLocation;
-            subLocation += pixelCount*LABELS*4;
+            subLocation += pixelCount*sizeof(Node);
             fp->assignment = subLocation;
-            subLocation += pixelCount*LABELS;
+            subLocation += pixelCount;
             fp->size = subLocation;
             fields[currentField].data = (label_t*)(memory+currentLocation+fp->data);
             fields[currentField].array = (Node*)(memory+currentLocation+fp->array);
@@ -636,7 +609,7 @@ TYPE MAP(Field mrf)
             cost += mrf.array[i].right[j];
             cost += mrf.array[i].up[j];
             cost += mrf.array[i].down[j];
-            cost += mrf.data[i][j];
+            cost += mrf.data[i][j] * SCALE;
 
             if(cost < best) {
                 best = cost;

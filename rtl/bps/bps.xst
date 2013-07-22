@@ -1,0 +1,2 @@
+run -ifn bps.prj -ifmt mixed -top bps -ofn bps.ngc -ofmt NGC -p xc5vlx330-2 -opt_mode Speed -opt_level 1
+

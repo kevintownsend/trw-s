@@ -1,0 +1,2 @@
+run -ifn sequencial_message_passer.prj -ifmt mixed -top sequencial_message_passer -ofn sequencial_message_passer.ngc -ofmt NGC -p xc5vlx330-2 -opt_mode Speed -opt_level 1
+

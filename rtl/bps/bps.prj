@@ -1,0 +1,4 @@
+verilog work bps.v
+verilog work b_ram.v
+verilog work ../sequencial_message_passer/sequencial_message_passer.v
+verilog work ../log2.vh

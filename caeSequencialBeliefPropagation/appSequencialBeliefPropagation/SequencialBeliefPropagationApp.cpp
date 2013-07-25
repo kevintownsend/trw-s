@@ -70,7 +70,9 @@ int main(int argc, char *argv[])
     FieldPackage* cnyFp = (FieldPackage*)cny_cp_malloc(size);
     cny_cp_memcpy(cnyFp, fp, size);
     //TODO: process image
+    cerr << "Calling coprocessor." << endl;
     copcall_fmt(sig, bps, "A", (uint64_t)cnyFp);
+    cerr << "Returing from coprocessor." << endl;
 
     //TODO: read back from coprocessor
     cny_cp_memcpy(fp, cnyFp, size);

@@ -9,7 +9,7 @@
     .signature pdk=65169
 bps:
     mov.ae0 %a8, $0, %aeg
-    caep00 $0
+    caep00.ae0 $0
     rtn
 
     .cend

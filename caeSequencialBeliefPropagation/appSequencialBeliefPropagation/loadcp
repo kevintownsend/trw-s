@@ -1,0 +1,7 @@
+#!/bin/sh
+
+export CNY_PERSONALITY_PATH=../personalities
+
+/opt/convey/sbin/mpcache -f
+/opt/convey/sbin/mpcache -a -S SequencialBeliefPropagation
+/opt/convey/sbin/mpcache -l -S SequencialBeliefPropagation

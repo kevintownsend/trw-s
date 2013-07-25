@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     stealTardis();
     #pragma omp parallel for
     for(int h = 0; h < 2*2; h++){
-        for(int i=0; i < 10; i++) {
+        for(int i=0; i < 20; i++) {
             cout << "Iteration: " << i << endl;
 
             //TODO: print each iteration

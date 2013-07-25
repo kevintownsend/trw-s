@@ -1,0 +1,16 @@
+#!/home/ktown/Python-3.3.2/python
+#TODO: check args
+x = 64
+y = 64
+newWidth = 4
+newHeight = 4
+tmp = input().split()
+width = int(tmp[0])
+height = int(tmp[1])
+pixelCount = width * height
+print(newWidth, newHeight)
+for i in range(height):
+    for j in range(width):
+        tmp = input()
+        if(i >= x and i < x+newWidth and j >= y and j < y+newHeight):
+            print(tmp)

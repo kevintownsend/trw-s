@@ -39,6 +39,8 @@ void trws(Field mrf){
             if(j != width - 1){
                 for(int k = 0; k < 16; k++){
                     mrf.array[rightIndex].left[k] = right[k];
+                    /*if(rightIndex == 1)
+                        cerr << "WOOT: " << right[k] << endl;*/
                 }
             }
 

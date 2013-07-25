@@ -1,10 +1,10 @@
-module bps_tb();
+module bps_master_tb();
     `define LABELS 16
     `define MESSAGE_WIDTH 6
     reg rst;
     reg clk;
     wire stall;
-    reg [2:0] opcode;
+    wire [2:0] opcode;
     `define OP_IDLE 0
     `define OP_LOAD 1
     `define OP_DOWN 2
@@ -25,14 +25,17 @@ module bps_tb();
     wire [`LABELS*`MESSAGE_WIDTH-1:0] up_out;
     reg [`LABELS*`MESSAGE_WIDTH-1:0] down_in;
     wire [`LABELS*`MESSAGE_WIDTH-1:0] down_out;
-
+    wire bps_stall;
+    reg start;
     `define WIDTH 4
     `define HEIGHT 4
 
     reg [63:0] memory [0: 5 + 2 * 5 * `WIDTH * `HEIGHT + `WIDTH * `HEIGHT / 8 - 1];
     reg [63:0] memory_check [0: 5 + 2 * 5 * `WIDTH * `HEIGHT + `WIDTH * `HEIGHT / 8 - 1];
 
-    bps #(4,4) dut(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr, mc_req_wrd_rdctl, mc_req_stall, mc_rsp_rdctl, mc_rsp_data, mc_rsp_push, mc_rsp_stall, up_in, up_out, down_in, down_out);
+    bps #(4,4) bps_dut(rst, clk, bps_stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr, mc_req_wrd_rdctl, mc_req_stall, mc_rsp_rdctl, mc_rsp_data, mc_rsp_push, mc_rsp_stall, up_in, up_out, down_in, down_out);
+
+    bps_master dut(rst, clk, start, stall, opcode, bps_stall);
 
     initial begin
         clk = 0;
@@ -43,18 +46,11 @@ module bps_tb();
         //$readmemh("../initial_memory.dat", memory);
         $readmemh("../initial_memory_small.dat", memory);
         rst = 1;
-        opcode = 0;
         addr_base = 0;
         mc_req_stall = 0;
         #100 rst = 0;
-        #100 opcode = `OP_LOAD;
-        #10 opcode = `OP_IDLE;
-        while(stall) #10; //$display("stall: %d", stall);
-        opcode = `OP_DOWN;
-        #10 opcode = `OP_IDLE;
-        while(stall) #10; //$display("stall: %d", stall);
-        #10 opcode = `OP_STORE_DOWN;
-        #10 opcode = `OP_IDLE;
+        #100 start = 1;
+        #10 start = 0;
         while(stall) #10; //$display("stall: %d", stall);
         $readmemh("../final_memory_small.dat", memory_check);
         for(i = 0; i < 5 + 2 * 5 * `WIDTH * `HEIGHT + `WIDTH * `HEIGHT / 8 - 1; i = i + 1)

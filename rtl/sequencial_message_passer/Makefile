@@ -1,6 +1,6 @@
 vsim_path_sequencial_message_passer = work/sequencial_message_passer
 vsim_path_sequencial_message_passer_tb = work/sequencial_message_passer_tb
-all : $(vsim_path_sequencial_message_passer) $(vsim_path_sequencial_message_passer_tb)
+all : work $(vsim_path_sequencial_message_passer) $(vsim_path_sequencial_message_passer_tb)
 
 
 work :
@@ -19,4 +19,4 @@ xst : sequencial_message_passer.v
 	xst < sequencial_message_passer.xst > xst.out
 
 clean :
-	rm -rf work *.ngc *.xrpt transcript _xmsgs xst
+	rm -rf work *.ngc *.xrpt transcript _xmsgs xst *.lso *.out

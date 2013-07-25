@@ -1,4 +1,4 @@
-all : inputToPgm outputToPgm cyBeliefPropagation tardis.o cyTrw-s
+all : inputToPgm outputToPgm cyBeliefPropagation tardis.o cyTrw-s mrf.o
 
 inputToPgm : inputToPgm.cpp
 	g++ -o inputToPgm inputToPgm.cpp
@@ -17,7 +17,7 @@ check :
 	outputToPgm 148 196 < section3 > section3.pgm
 	outputToPgm < output_labels.txt > output.pgm
 
-tardis.o :
+tardis.o : tardis.cpp
 	g++ -c tardis.cpp
 
 trw-s.o : trw-s.cpp
@@ -32,6 +32,9 @@ checkTrw :
 	outputToPgm 148 196 < section2 > section2.pgm
 	outputToPgm 148 196 < section3 > section3.pgm
 	outputToPgm < output_labels.txt > output.pgm
+
+mrf.o : mrf.cpp
+	g++ -c mrf.cpp
 
 clean :
 	rm -rf inputToPgm outputToPgm cyBeliefPropagation cyTrw-s *.pgm *.o section*

@@ -1,0 +1,2 @@
+run -ifn different_widths_fifo.prj -ifmt mixed -top different_widths_fifo -ofn different_widths_fifo.ngc -ofmt NGC -p xc5vlx330-2 -opt_mode Speed -opt_level 1
+

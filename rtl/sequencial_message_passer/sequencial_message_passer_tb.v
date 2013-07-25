@@ -68,18 +68,44 @@ module sequencial_message_passer_tb();
         for(i = 0; i < `LABELS; i = i + 1) begin
             data_2d[i] = 1;
             vertical_message_forward_2d[i] = 1 + i;
-            vertical_message_backward_2d[i] = 0;
+            vertical_message_backward_2d[i] = 1 + i;
             horizontal_message_forward_2d[i] = 1 + i;
-            horizontal_message_backward_2d[i] = 0;
+            horizontal_message_backward_2d[i] = 1 + i;
         end
         vertical_message_forward_2d[1] = 32;
         #10 push = 0;
         for(i = 0; i < `LABELS; i = i + 1) begin
             data_2d[i] = 0;
             vertical_message_forward_2d[i] = 0;
-            vertical_message_backward_2d[i] = 1 + i;
+            vertical_message_backward_2d[i] = 0;
             horizontal_message_forward_2d[i] = 0;
+            horizontal_message_backward_2d[i] = 0;
+        end
+        #10
+        for(i = 0; i < `LABELS; i = i + 1) begin
+            data_2d[i] = 0;
+            vertical_message_forward_2d[i] = 0;
+            vertical_message_backward_2d[i] = 0;
+            horizontal_message_forward_2d[i] = 0;
+            horizontal_message_backward_2d[i] = 0;
+        end
+        #100 push = 1;
+        for(i = 0; i < `LABELS; i = i + 1) begin
+            data_2d[i] = 1 + i;
+            vertical_message_forward_2d[i] = 1 + i;
+            vertical_message_backward_2d[i] = 1 + i + i;
+            horizontal_message_forward_2d[i] = 1 + i;
             horizontal_message_backward_2d[i] = 1 + i;
+        end
+        data_2d[0] = 200;
+        vertical_message_forward_2d[1] = 32;
+        #10 push = 0;
+        for(i = 0; i < `LABELS; i = i + 1) begin
+            data_2d[i] = 0;
+            vertical_message_forward_2d[i] = 0;
+            vertical_message_backward_2d[i] = 0;
+            horizontal_message_forward_2d[i] = 0;
+            horizontal_message_backward_2d[i] = 0;
         end
         #10
         for(i = 0; i < `LABELS; i = i + 1) begin

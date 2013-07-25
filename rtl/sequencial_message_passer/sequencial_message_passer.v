@@ -19,6 +19,8 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
     reg [MESSAGE_WIDTH-1:0] horizontal_message_forward_stg0 [0:LABELS-1];
     reg [MESSAGE_WIDTH-1:0] vertical_message_forward_stg0 [0:LABELS-1];
     reg [DATA_WIDTH-1:0] data_stg0 [0:LABELS-1];
+    reg [MESSAGE_WIDTH-1:0] horizontal_message_backward_stg0 [0:LABELS-1];
+    reg [MESSAGE_WIDTH-1:0] vertical_message_backward_stg0 [0:LABELS-1];
     reg [MESSAGE_WIDTH-1:0] horizontal_message_backward_stg1 [0:LABELS-1];
     reg [MESSAGE_WIDTH-1:0] vertical_message_backward_stg1 [0:LABELS-1];
 
@@ -30,6 +32,10 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
             vertical_message_forward_stg0[i] <= vertical_message_forward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
             data_stg0[i] <= data[(i+1)*DATA_WIDTH-1 -:DATA_WIDTH];
         end
+        for(i = 0; i < LABELS; i = i + 1) begin
+            horizontal_message_backward_stg0[i] <= horizontal_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
+            vertical_message_backward_stg0[i] <= vertical_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
+        end
     end
     reg [INTERNAL_WIDTH-1:0] partial_sum_stg1 [0:LABELS-1];
     always @(posedge clk) begin
@@ -37,8 +43,8 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
             partial_sum_stg1[i] <= horizontal_message_forward_stg0[i] + vertical_message_forward_stg0[i] + data_stg0[i];
         end
         for(i = 0; i < LABELS; i = i + 1) begin
-            horizontal_message_backward_stg1[i] <= horizontal_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
-            vertical_message_backward_stg1[i] <= vertical_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
+            horizontal_message_backward_stg1[i] <= horizontal_message_backward_stg0[i];
+            vertical_message_backward_stg1[i] <= vertical_message_backward_stg0[i];
         end
     end
 
@@ -53,7 +59,15 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
 
     //horizontal_out
     reg [INTERNAL_WIDTH-1:0] horizontal_min_calc_stg3 [0:LABELS-1][1:LOG2_LABELS];
-    reg [INTERNAL_WIDTH-1:0] horizontal_min_stg3;
+    wire [INTERNAL_WIDTH-1:0] horizontal_min_stg3;
+    integer i1, i2, i3;
+    reg [32:0] stops[0:2];
+    initial begin
+        stops[0] = 4;
+        stops[1] = 2;
+        stops[2] = 1;
+    end 
+
     always @(posedge clk) begin
         for(j = 0; j < LABELS; j = j + 2) begin
             if(horizontal_out_stg2[j] < horizontal_out_stg2[j+1])
@@ -62,18 +76,21 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
                 horizontal_min_calc_stg3[j][1] <= horizontal_out_stg2[j+1];
         end
         k = 1;
-        for(i = 2; i < LABELS; i = 2*i) begin
-            for(j = 0; j < LABELS; j = j + 2*i) begin
+        i = 2;
+        for(i1 = 0; i1 < 3; i1 = i1 + 1) begin
+            j = 0;
+            for(i2 = 0; i2 < 2**(2-i1); i2 = i2 + 1) begin
                 if(horizontal_min_calc_stg3[j][k] < horizontal_min_calc_stg3[j+i][k])
                     horizontal_min_calc_stg3[j][k+1] <= horizontal_min_calc_stg3[j][k];
                 else
                     horizontal_min_calc_stg3[j][k+1] <= horizontal_min_calc_stg3[j+i][k];
+                j = j + i + i;
             end
             k = k + 1;
+            i = i + i;
         end
     end
-    always @*
-        horizontal_min_stg3 = horizontal_min_calc_stg3[0][LOG2_LABELS];
+    assign horizontal_min_stg3 = horizontal_min_calc_stg3[0][LOG2_LABELS];
 
     reg [INTERNAL_WIDTH-1:0] horizontal_smooth_stg3_1 [0:LABELS-1];
     reg [INTERNAL_WIDTH-1:0] horizontal_smooth_stg3_2 [0:LABELS-1];
@@ -124,14 +141,14 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
     end
     
     generate
-        for(g = 0; g < LABELS; g = g + 1) begin
+        for(g = 0; g < LABELS; g = g + 1) begin : gen_horizontal_out
             assign horizontal_out[(g+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH] = horizontal_out_stg4[g];
         end
     endgenerate
 
     //vertical_out
     reg [INTERNAL_WIDTH-1:0] vertical_min_calc_stg3 [0:LABELS-1][1:LOG2_LABELS];
-    reg [INTERNAL_WIDTH-1:0] vertical_min_stg3;
+    wire [INTERNAL_WIDTH-1:0] vertical_min_stg3;
     always @(posedge clk) begin
         for(j = 0; j < LABELS; j = j + 2) begin
             if(vertical_out_stg2[j] < vertical_out_stg2[j+1])
@@ -140,17 +157,21 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
                 vertical_min_calc_stg3[j][1] <= vertical_out_stg2[j+1];
         end
         k = 1;
-        for(i = 2; i < LABELS; i = 2*i) begin
-            for(j = 0; j < LABELS; j = j + 2*i) begin
+        i = 2;
+        for(i1 = 0; i1 < 3; i1 = i1 + 1) begin
+            j = 0;
+            for(i2 = 0; i2 < 2**(2-i1); i2 = i2 + 1) begin
                 if(vertical_min_calc_stg3[j][k] < vertical_min_calc_stg3[j+i][k])
                     vertical_min_calc_stg3[j][k+1] <= vertical_min_calc_stg3[j][k];
                 else
                     vertical_min_calc_stg3[j][k+1] <= vertical_min_calc_stg3[j+i][k];
+                j = j + i + i;
             end
             k = k + 1;
+            i = i + i;
         end
-        vertical_min_stg3 = vertical_min_calc_stg3[0][LOG2_LABELS];
     end
+    assign vertical_min_stg3 = vertical_min_calc_stg3[0][LOG2_LABELS];
 
     reg [INTERNAL_WIDTH-1:0] vertical_smooth_stg3_1 [0:LABELS-1];
     reg [INTERNAL_WIDTH-1:0] vertical_smooth_stg3_2 [0:LABELS-1];
@@ -201,7 +222,7 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
     end
     
     generate
-        for(g = 0; g < LABELS; g = g + 1) begin
+        for(g = 0; g < LABELS; g = g + 1) begin : gen_vertical_out
             assign vertical_out[(g+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH] = vertical_out_stg4[g];
         end
     endgenerate

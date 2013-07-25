@@ -14,6 +14,8 @@ typedef unsigned long long uint64;
 
 //TODO: replace with new assembly function
 extern "C" void bps();
+extern "C" void custom0();
+extern "C" void loadAeg0();
 
 int main(int argc, char *argv[])
 {
@@ -71,7 +73,10 @@ int main(int argc, char *argv[])
     cny_cp_memcpy(cnyFp, fp, size);
     //TODO: process image
     cerr << "Calling coprocessor." << endl;
-    copcall_fmt(sig, bps, "A", (uint64_t)cnyFp);
+    //copcall_fmt(sig, bps, "A", (uint64_t)cnyFp);
+    copcall_fmt(sig, loadAeg0, "A", (uint64_t)cnyFp);
+    cerr << "custom instruction" << endl;
+    copcall_fmt(sig, custom0, "");
     cerr << "Returing from coprocessor." << endl;
 
     //TODO: read back from coprocessor

@@ -16,6 +16,9 @@ typedef unsigned long long uint64;
 extern "C" void bps();
 extern "C" void custom0();
 extern "C" void loadAeg0();
+extern "C" void load_data();
+extern "C" void belief_down();
+extern "C" void store_down();
 
 int main(int argc, char *argv[])
 {
@@ -76,7 +79,12 @@ int main(int argc, char *argv[])
     //copcall_fmt(sig, bps, "A", (uint64_t)cnyFp);
     copcall_fmt(sig, loadAeg0, "A", (uint64_t)cnyFp);
     cerr << "custom instruction" << endl;
-    copcall_fmt(sig, custom0, "");
+    copcall_fmt(sig, load_data, "");
+    cout << "@host:part1" << endl;
+    copcall_fmt(sig, belief_down, "");
+    cout << "@host:part2" << endl;
+    copcall_fmt(sig, store_down, "");
+    cout << "@host:part3" << endl;
     cerr << "Returing from coprocessor." << endl;
 
     //TODO: read back from coprocessor

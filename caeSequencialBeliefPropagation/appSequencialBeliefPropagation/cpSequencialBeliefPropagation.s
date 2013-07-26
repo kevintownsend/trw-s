@@ -26,4 +26,30 @@ bps:
 custom0:
     caep00.ae0 $0
     rtn
+
+#call sequencial belief propagation
+    .globl load_data
+    .type load_data. @function
+    .signature pdk=65169
+load_data:
+    caep01.ae0 $0
+    rtn
+
+#call sequencial belief propagation
+    .globl belief_down
+    .type belief_down. @function
+    .signature pdk=65169
+belief_down:
+    caep02.ae0 $0
+    rtn
+
+#call sequencial belief propagation
+    .globl store_down
+    .type store_down. @function
+    .signature pdk=65169
+store_down:
+    caep04.ae0 $0
+    rtn
+
     .cend
+

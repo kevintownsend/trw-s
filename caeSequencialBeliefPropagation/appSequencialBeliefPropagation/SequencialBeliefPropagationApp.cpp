@@ -19,6 +19,7 @@ extern "C" void loadAeg0();
 extern "C" void load_data();
 extern "C" void belief_down();
 extern "C" void store_down();
+extern "C" long get_aeg();
 
 int main(int argc, char *argv[])
 {
@@ -86,6 +87,17 @@ int main(int argc, char *argv[])
     copcall_fmt(sig, store_down, "");
     cout << "@host:part3" << endl;
     cerr << "Returing from coprocessor." << endl;
+
+    uint64_t errorRtn;
+    cout << "@host: cnyFP: " << (uint64_t)cnyFp << endl;
+    errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)0);
+    cout << "@host:error:"  << errorRtn << endl;
+    errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)1);
+    cout << hex <<  "@host:error:"  << errorRtn << endl << dec;
+    errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)2);
+    cout << "@host:error:"  << errorRtn << endl;
+    errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)3);
+    cout << "@host:error:"  << errorRtn << endl;
 
     //TODO: read back from coprocessor
     cny_cp_memcpy(fp, cnyFp, size);

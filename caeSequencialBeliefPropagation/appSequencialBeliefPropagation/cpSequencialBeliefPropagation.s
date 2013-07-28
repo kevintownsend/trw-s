@@ -51,5 +51,15 @@ store_down:
     caep04.ae0 $0
     rtn
 
+#return aeg value
+    .globl get_aeg
+    .type get_aeg. @function
+    .signature pdk=65169
+get_aeg:
+    mov.ae0 %aeg, %a8, %s8
+    mov %s8, %a8
+    rtn
+
+
     .cend
 

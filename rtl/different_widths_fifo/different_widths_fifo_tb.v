@@ -58,10 +58,12 @@ initial begin
     push <= 0;
     pop <= 1;
     for(i = 1; i < 65; i = i + 1) begin
-        #10 if(q != i % 16) begin
-            $display("ERROR:");
+        #10 
+        if(q != i % 16) begin
+            $display("ERROR: %H", i);
         end
-        #10 if(q != i / 16) begin
+        #10 
+        if(q != i / 16) begin
             $display("ERROR:");
         end
 

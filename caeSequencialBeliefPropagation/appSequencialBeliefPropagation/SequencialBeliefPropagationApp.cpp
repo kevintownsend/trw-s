@@ -98,7 +98,17 @@ int main(int argc, char *argv[])
     cout << "@host:error:"  << errorRtn << endl;
     errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)3);
     cout << "@host:error:"  << errorRtn << endl;
-
+    errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)4);
+    cout << "@host:error:"  << errorRtn << endl;
+    errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)5);
+    cout << "@host:error:"  << errorRtn << endl;
+    cout << "@host: idk:" << errorRtn - (uint64_t)cnyFp << endl;
+    if(errorRtn >= cnyFp->array + (uint64_t)cnyFp && cnyFp->assignment + (uint64_t)cnyFp >= errorRtn)
+        cout << "errorRtn in proper place " << endl;
+    else
+        cout << "errorRtn not in proper place " << endl;
+    errorRtn = l_copcall_fmt(sig, get_aeg, "A", (uint64_t)6);
+    cout << hex << "@host:error:"  << errorRtn << endl << dec;
     //TODO: read back from coprocessor
     cny_cp_memcpy(fp, cnyFp, size);
     //trws(mrf);

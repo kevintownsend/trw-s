@@ -11,7 +11,7 @@ module different_widths_fifo(rst, clk, push, pop, d, q, full, empty, count, almo
     input push;
     input pop;
     input [INPUT_WIDTH-1:0] d;
-    output [OUTPUT_WIDTH-1:0] q;
+    output reg [OUTPUT_WIDTH-1:0] q;
     output full;
     output empty;
     output [DEPTH:0]count;
@@ -24,25 +24,25 @@ reg [DEPTH:0] r_beg;
 reg r_empty, r_full;
 wire [DEPTH:0] upper_r_end;
 assign upper_r_end = r_end[DEPTH + WIDTH_RATIO - 1 -: DEPTH+1];
-
-reg [INPUT_WIDTH-1:0] ram [(2**DEPTH)-1:0];
+wire [INPUT_WIDTH-1:0] pre_q;
+simple_dual_port_dist_ram #(INPUT_WIDTH, DEPTH) ram(clk, d, pre_q, push, r_beg[DEPTH-1:0], upper_r_end[DEPTH-1:0]);
 always @(posedge clk) begin
     if(rst) begin
         r_end <= 0;
         r_beg <= 0;
     end
-    r_q <= ram[r_end[DEPTH + WIDTH_RATIO - 2 -: DEPTH]][(r_end[WIDTH_RATIO - 2 :0] + 1) * OUTPUT_WIDTH - 1 -: OUTPUT_WIDTH];
     if(pop)
         r_end <= r_end + 1;
     if(push) begin
         r_beg <= r_beg + 1;
-        ram[r_beg] <= d;
     end
     //TODO: make correct
     r_empty <= 1;
     r_full <= 1;
 end
-assign q = r_q;
+always @(posedge clk) begin
+    q <= pre_q >> ((r_end[0])*OUTPUT_WIDTH);
+end
 assign empty = (upper_r_end == r_beg);
 assign full = (upper_r_end[DEPTH-1:0] == r_beg[DEPTH-1:0]) && (upper_r_end[DEPTH] != r_beg[DEPTH]);
 assign count = r_beg - upper_r_end;

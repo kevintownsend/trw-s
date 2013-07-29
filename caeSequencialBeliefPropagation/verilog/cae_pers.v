@@ -225,6 +225,8 @@ initial $display("starting cae personality aeid:%d\n", i_aeid);
    //**************************************************************************
    //              PERSONALITY SPECIFIC LOGIC
    //**************************************************************************
+    wire [0:5] debug_push;
+    wire [63:0] debug0, debug1, debug2, debug3, debug4, debug5;
 
    //
    // AEG[0..NA-1] Registers
@@ -244,6 +246,42 @@ initial $display("starting cae personality aeid:%d\n", i_aeid);
       always @* begin
         case (g)
 //TODO: add cases for registers to be written to
+            1: begin
+                if(debug_push[0])
+                    c_aeg = debug0;
+                else
+                    c_aeg = r_aeg;
+            end
+            2: begin
+                if(debug_push[1])
+                    c_aeg = debug1;
+                else
+                    c_aeg = r_aeg;
+            end
+            3: begin
+                if(debug_push[2])
+                    c_aeg = debug2;
+                else
+                    c_aeg = r_aeg;
+            end
+            4: begin
+                if(debug_push[3])
+                    c_aeg = debug3;
+                else
+                    c_aeg = r_aeg;
+            end
+            5: begin
+                if(debug_push[4])
+                    c_aeg = debug4;
+                else
+                    c_aeg = r_aeg;
+            end
+            6: begin
+                if(debug_push[5])
+                    c_aeg = debug5;
+                else
+                    c_aeg = r_aeg;
+            end
             default: c_aeg = r_aeg;
         endcase
       end
@@ -251,13 +289,13 @@ initial $display("starting cae personality aeid:%d\n", i_aeid);
       wire c_aeg_we = inst_aeg_wr && inst_aeg_idx[NB-1:0] == g;
 
       always @(posedge clk) begin
-        if (c_aeg_we) begin
-            r_aeg <= cae_data;
-            $display("writing: %x", cae_data);
-        end
-        else
-            r_aeg <= c_aeg;
-        end
+            if (c_aeg_we) begin
+                r_aeg <= cae_data;
+                $display("writing: %x", cae_data);
+            end
+            else
+                r_aeg <= c_aeg;
+      end
       assign w_aeg[g] = r_aeg;
     end endgenerate
 
@@ -272,7 +310,7 @@ initial $display("starting cae personality aeid:%d\n", i_aeid);
       r_ret_data   <= w_aeg[inst_aeg_idx[NB-1:0]];
       r_err_aegidx <= (inst_aeg_wr || inst_aeg_rd) && !c_val_aegidx;
 //TODO: add logic to decide which instructions are implemented
-      r_err_unimpl <= err_unimpl || (inst_val && (inst_caep !== 'd0/* && inst_caep !== 'd1 && inst_caep !== 'd2*/)); 
+      r_err_unimpl <= err_unimpl || (inst_val && (inst_caep !== 'd0 && inst_caep !== 'd1 && inst_caep !== 'd2 && inst_caep !== 'd4)); 
    end
    assign cae_ret_data_vld = r_ret_val;
    assign cae_ret_data     = r_ret_data;
@@ -416,22 +454,74 @@ assign mc7_rsp_stall_o = 1'b0;
     wire bps_stall;
     wire master_stall;
     reg [0:3] reset_tree;
+    wire c_caep00;
+    assign c_caep00 = inst_caep == 0 && inst_val;
+    wire c_caep01;
+    assign c_caep01 = inst_caep == 1 && inst_val;
+    wire c_caep02;
+    assign c_caep02 = inst_caep == 2 && inst_val;
+    wire c_caep04;
+    assign c_caep04 = inst_caep == 4 && inst_val;
     always @(posedge clk_per) begin
         reset_tree[0] <= reset_per;
         reset_tree[1:3] <= reset_tree[0:2];
     end
-    bps_master master(reset_tree[3], clk_per, inst_caep == 0 && inst_val, master_stall, bps_opcode, bps_stall);
-  
-    bps #(4, 4) bps0(reset_tree[3], clk_per, bps_stall, bps_opcode, w_aeg[0], mc0_req_ld_e, mc0_req_st_e, mc0_req_vadr_e, mc0_req_wrd_rdctl_e, mc0_rd_rq_stall_e || mc0_wr_rq_stall_e, mc0_rsp_rdctl_e, mc0_rsp_data_e, mc0_rsp_push_e, mc0_rsp_stall_e, 0, , 0, );
 
-    always @(posedge clk)
-        if(mc0_req_ld_e)
-            $display("load request: %H", mc0_req_vadr_e);
-    /* ---------- debug & synopsys off blocks  ---------- */
+    reg [2:0] instruction;
+    always @(posedge clk) begin
+        if(inst_val)
+            instruction = inst_caep;
+        else
+            instruction = 0;
+    end
+    bps_master master(reset_tree[3], clk_per, c_caep00, instruction, master_stall, bps_opcode, bps_stall);
+  
+    bps #(4, 4) bps0(reset_tree[3], clk_per, bps_stall, bps_opcode, w_aeg[0], mc0_req_ld_e, mc0_req_st_e, mc0_req_vadr_e, mc0_req_wrd_rdctl_e, mc0_rd_rq_stall_e || mc0_wr_rq_stall_e, mc0_rsp_rdctl_e, mc0_rsp_data_e, mc0_rsp_push_e, mc0_rsp_stall_e, 96'H0, , 96'H0, , debug_push, debug0, debug1, debug2, debug3, debug4, debug5);
+
+    integer ld_reqs, st_reqs;
+    initial begin
+        ld_reqs = 0;
+        st_reqs = 0;
+    end
+    always @(posedge clk) begin
+        if(mc0_req_ld_e) begin
+            $display("@simulation:Load request: %H", mc0_req_vadr_e);
+            ld_reqs = ld_reqs + 1;
+            $display("@simulation:Load requests: %d", ld_reqs);
+        end
+        if(mc0_req_st_e) begin
+            $display("@simulation:Store request: %H, data:", mc0_req_vadr_e, mc0_req_wrd_rdctl_e);
+            st_reqs = st_reqs + 1;
+            $display("@simulation:Store requests: %d", st_reqs);
+        end
+    end
+    always @(posedge clk) begin
+        if(debug_push[0])
+            $display("@simulation:debug0: %d", debug0);
+        if(debug_push[1])
+            $display("@simulation:debug1: %d", debug1);
+        if(debug_push[2])
+            $display("@simulation:debug2: %d", debug2);
+        if(debug_push[3])
+            $display("@simulation:debug3: %d", debug3);
+        if(debug_push[4])
+            $display("@simulation:debug4: %d", debug4);
+
+    end
+   reg [2:0] instruction_stall;
+   always @(posedge clk) begin
+        if(c_caep00 || c_caep01 || c_caep02 || c_caep04)
+            instruction_stall[2] <= 1;
+        if(instruction_stall[2])
+            instruction_stall <= instruction_stall + 1;
+        if(reset_tree[3])
+            instruction_stall <= 0;
+   end
    //logic for using cae IMPORTANT. cae_idle should be 0 when executing a custom instruction and 1 otherwise.
    //cae_stall should be 1 when when exectuting a custom instruction and 0 otherwise.
    assign cae_idle  = !master_stall;
-   assign cae_stall = master_stall;
+   assign cae_stall = master_stall || c_caep00 || c_caep01 || c_caep02 || c_caep04 || instruction_stall[2];
+    /* ---------- debug & synopsys off blocks  ---------- */
 
     // synopsys translate_off
 

@@ -27,6 +27,7 @@ module bps_master_tb();
     wire [`LABELS*`MESSAGE_WIDTH-1:0] down_out;
     wire bps_stall;
     reg start;
+    reg [2:0] instruction;
     `define WIDTH 4
     `define HEIGHT 4
 
@@ -35,7 +36,7 @@ module bps_master_tb();
 
     bps #(4,4) bps_dut(rst, clk, bps_stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr, mc_req_wrd_rdctl, mc_req_stall, mc_rsp_rdctl, mc_rsp_data, mc_rsp_push, mc_rsp_stall, up_in, up_out, down_in, down_out);
 
-    bps_master dut(rst, clk, start, stall, opcode, bps_stall);
+    bps_master dut(rst, clk, start, instruction, stall, opcode, bps_stall);
 
     initial begin
         clk = 0;
@@ -48,9 +49,17 @@ module bps_master_tb();
         rst = 1;
         addr_base = 0;
         mc_req_stall = 0;
+        start = 0;
+        instruction = 0;
         #100 rst = 0;
-        #100 start = 1;
-        #10 start = 0;
+        #100 instruction = `OP_LOAD;
+        #10 instruction = `OP_IDLE;
+        while(stall) #10; //$display("stall: %d", stall);
+        #100 instruction = `OP_DOWN;
+        #10 instruction = `OP_IDLE;
+        while(stall) #10; //$display("stall: %d", stall);
+        #100 instruction = `OP_STORE_DOWN;
+        #10 instruction = `OP_IDLE;
         while(stall) #10; //$display("stall: %d", stall);
         $readmemh("../final_memory_small.dat", memory_check);
         for(i = 0; i < 5 + 2 * 5 * `WIDTH * `HEIGHT + `WIDTH * `HEIGHT / 8 - 1; i = i + 1)

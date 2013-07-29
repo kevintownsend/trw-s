@@ -1,7 +1,8 @@
-module bps_master(rst, clk, start, stall, bps_opcode, bps_stall);
+module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall);
     input rst;
     input clk;
     input start;
+    input [2:0] instruction;
     output reg stall;
     output reg [2:0] bps_opcode;
     `define OP_IDLE 0
@@ -11,8 +12,11 @@ module bps_master(rst, clk, start, stall, bps_opcode, bps_stall);
     `define OP_STORE_DOWN 4
     `define OP_STORE_UP 5
     input bps_stall;
-    
-    reg [2:0] state;
+   
+    reg [2:0] r_instruction;
+    always @(posedge clk)
+        r_instruction <= instruction;
+    reg [3:0] state;
     `define IDLE 0
     `define LOAD_DATA 1
     `define LOAD_DATA_WAIT 2
@@ -20,14 +24,19 @@ module bps_master(rst, clk, start, stall, bps_opcode, bps_stall);
     `define DOWN_BPS_WAIT 4
     `define STORE_DOWN 5
     `define STORE_DOWN_WAIT 6
+    `define EXECUTE 7
+    `define WAIT 8
     always @(posedge clk) begin
         if(rst) begin
             state <= `IDLE;
         end else begin
             case(state)
-                `IDLE:
+                `IDLE: begin
                     if(start)
                         state <= `LOAD_DATA;
+                    else if(instruction)
+                        state <= `EXECUTE;
+                end
                 `LOAD_DATA: begin
                     $display("LOADING Data");
                     state <= `LOAD_DATA_WAIT;
@@ -49,6 +58,13 @@ module bps_master(rst, clk, start, stall, bps_opcode, bps_stall);
                 `STORE_DOWN_WAIT:
                     if(!bps_stall)
                         state <= `IDLE;
+                `EXECUTE:
+                    state <= `WAIT;
+                `WAIT:
+                    if(!bps_stall)
+                        state <= `IDLE;
+                default:
+                    state <= `IDLE;
             endcase
         end
     end
@@ -69,6 +85,10 @@ module bps_master(rst, clk, start, stall, bps_opcode, bps_stall);
             `STORE_DOWN:
                 bps_opcode  = `OP_STORE_DOWN;
             `STORE_DOWN_WAIT: begin
+            end
+            `EXECUTE:
+                bps_opcode = r_instruction;
+            default: begin
             end
         endcase
     end

@@ -7,7 +7,7 @@
 #include <cstring>
 #include <inttypes.h>
 #undef DEBUG
-
+#define COPROCESSOR true
 using namespace std;
 
 typedef unsigned long long uint64;
@@ -73,6 +73,9 @@ int main(int argc, char *argv[])
     initialMemory << dec;
     initialMemory.close();
     //TODO: move image to coprocessor
+    //TODO: option for coprocessor or local
+    int runs = 2;
+    if(COPROCESSOR){
     FieldPackage* cnyFp = (FieldPackage*)cny_cp_malloc(size);
     cny_cp_memcpy(cnyFp, fp, size);
     //TODO: process image
@@ -111,7 +114,10 @@ int main(int argc, char *argv[])
     cout << hex << "@host:error:"  << errorRtn << endl << dec;
     //TODO: read back from coprocessor
     cny_cp_memcpy(fp, cnyFp, size);
-    //trws(mrf);
+    }else{
+        for(int i = 0; i < runs; i++)
+            trws(mrf);
+    }
     ofstream finalMemory("final_memory.dat");
     finalMemory << hex;
     for(int i = 0; i < size/8; i++){

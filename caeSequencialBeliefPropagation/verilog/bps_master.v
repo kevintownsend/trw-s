@@ -1,4 +1,4 @@
-module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall);
+module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall, iterations);
     input rst;
     input clk;
     input start;
@@ -12,6 +12,7 @@ module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall);
     `define OP_STORE_DOWN 4
     `define OP_STORE_UP 5
     input bps_stall;
+    input [7:0] iterations;
    
     reg [2:0] r_instruction;
     always @(posedge clk)
@@ -24,8 +25,15 @@ module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall);
     `define DOWN_BPS_WAIT 4
     `define STORE_DOWN 5
     `define STORE_DOWN_WAIT 6
+    `define UP_BPS 9
+    `define UP_BPS_WAIT 10
+    `define STORE_UP 11
+    `define STORE_UP_WAIT 12
     `define EXECUTE 7
     `define WAIT 8
+
+    reg [7:0] count; 
+
     always @(posedge clk) begin
         if(rst) begin
             state <= `IDLE;
@@ -36,6 +44,7 @@ module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall);
                         state <= `LOAD_DATA;
                     else if(instruction)
                         state <= `EXECUTE;
+                    count <= iterations;
                 end
                 `LOAD_DATA: begin
                     $display("LOADING Data");
@@ -46,16 +55,35 @@ module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall);
                         state <= `DOWN_BPS;
                 `DOWN_BPS:begin
                     state <= `DOWN_BPS_WAIT;
+                    count <= count - 1;
                     $display("Downward BP-S");
                  end
                 `DOWN_BPS_WAIT:
-                    if(!bps_stall)
-                        state <= `STORE_DOWN;
+                    if(!bps_stall) begin
+                        if(count == 0)
+                            state <= `STORE_DOWN;
+                        else
+                            state <= `UP_BPS;
+                    end
                 `STORE_DOWN: begin
                     state <= `STORE_DOWN_WAIT;
                     $display("Storing downward");
                 end
                 `STORE_DOWN_WAIT:
+                    if(!bps_stall)
+                        state <= `UP_BPS;
+                `UP_BPS:
+                    state <= `UP_BPS_WAIT;
+                `UP_BPS_WAIT:
+                    if(!bps_stall) begin
+                        if(count == 0)
+                            state <= `STORE_UP;
+                        else
+                            state <= `DOWN_BPS;
+                    end
+                `STORE_UP:
+                    state <= `STORE_UP_WAIT;
+                `STORE_UP_WAIT:
                     if(!bps_stall)
                         state <= `IDLE;
                 `EXECUTE:
@@ -85,6 +113,14 @@ module bps_master(rst, clk, start, instruction, stall, bps_opcode, bps_stall);
             `STORE_DOWN:
                 bps_opcode  = `OP_STORE_DOWN;
             `STORE_DOWN_WAIT: begin
+            end
+            `UP_BPS:
+                bps_opcode = `OP_UP;
+            `UP_BPS_WAIT: begin
+            end
+            `STORE_UP:
+                bps_opcode = `OP_STORE_UP;
+            `STORE_UP_WAIT: begin
             end
             `EXECUTE:
                 bps_opcode = r_instruction;

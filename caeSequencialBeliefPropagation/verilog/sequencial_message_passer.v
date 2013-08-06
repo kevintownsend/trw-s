@@ -19,6 +19,8 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
     reg [MESSAGE_WIDTH-1:0] horizontal_message_forward_stg0 [0:LABELS-1];
     reg [MESSAGE_WIDTH-1:0] vertical_message_forward_stg0 [0:LABELS-1];
     reg [DATA_WIDTH-1:0] data_stg0 [0:LABELS-1];
+    reg [MESSAGE_WIDTH-1:0] horizontal_message_backward_stg0 [0:LABELS-1];
+    reg [MESSAGE_WIDTH-1:0] vertical_message_backward_stg0 [0:LABELS-1];
     reg [MESSAGE_WIDTH-1:0] horizontal_message_backward_stg1 [0:LABELS-1];
     reg [MESSAGE_WIDTH-1:0] vertical_message_backward_stg1 [0:LABELS-1];
 
@@ -30,6 +32,10 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
             vertical_message_forward_stg0[i] <= vertical_message_forward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
             data_stg0[i] <= data[(i+1)*DATA_WIDTH-1 -:DATA_WIDTH];
         end
+        for(i = 0; i < LABELS; i = i + 1) begin
+            horizontal_message_backward_stg0[i] <= horizontal_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
+            vertical_message_backward_stg0[i] <= vertical_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
+        end
     end
     reg [INTERNAL_WIDTH-1:0] partial_sum_stg1 [0:LABELS-1];
     always @(posedge clk) begin
@@ -37,8 +43,8 @@ module sequencial_message_passer(clk, horizontal_message_forward, horizontal_mes
             partial_sum_stg1[i] <= horizontal_message_forward_stg0[i] + vertical_message_forward_stg0[i] + data_stg0[i];
         end
         for(i = 0; i < LABELS; i = i + 1) begin
-            horizontal_message_backward_stg1[i] <= horizontal_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
-            vertical_message_backward_stg1[i] <= vertical_message_backward[(i+1)*MESSAGE_WIDTH-1 -:MESSAGE_WIDTH];
+            horizontal_message_backward_stg1[i] <= horizontal_message_backward_stg0[i];
+            vertical_message_backward_stg1[i] <= vertical_message_backward_stg0[i];
         end
     end
 

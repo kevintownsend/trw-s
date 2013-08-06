@@ -1,0 +1,12 @@
+#!/bin/sh
+
+export CNY_PERSONALITY_PATH=../personalities
+export CNY_RUNTIME_STARTUP_DEBUG=0
+export CNY_CALL_STATS=1
+
+#export CNY_PDK_CLIENT_MODE=win|debug
+#export CNY_PDK_CLIENT_MODE=debug
+
+
+./cnyCySbp
+

@@ -3,3 +3,5 @@ verilog work b_ram.v
 verilog work simple_dual_port_b_ram.v
 verilog work ../sequencial_message_passer/sequencial_message_passer.v
 verilog work ../log2.vh
+verilog work ../different_widths_fifo/different_widths_fifo.v
+verilog work ../different_widths_fifo/simple_dual_port_dist_ram.v

@@ -7,8 +7,8 @@ using namespace std;
 int main(int argc, char* argv[]){
     int height, width;
     if(argc == 3){
-        height = atoi(argv[1]);
-        width = atoi(argv[2]);
+        width = atoi(argv[1]);
+        height = atoi(argv[2]);
     }else if(argc != 1){
         cerr << "usage: " << argv[0] << " < input > output.pgm" << endl;
         return 1;

@@ -5,7 +5,7 @@
 # DEFAULT LOCATION FOR DEVELOPMENT
 export CNY_PDK = /opt/convey/pdk
 export CNY_PDK_REV = 2012_03_19
-export CNY_PDK_PLATFORM = hc-1
+export CNY_PDK_PLATFORM = hc-1ex
 
 # Personality can be built with or without a crossbar
 export MC_XBAR = 1

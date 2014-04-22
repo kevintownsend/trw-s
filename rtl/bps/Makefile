@@ -1,13 +1,16 @@
+vsim_bps_xst_tb = work/bps_xst_tb
 vsim_bps_tb = work/bps_tb
 vsim_bps = work/bps
 vsim_b_ram = work/b_ram
 vsim_sequencial_message_passer = work/sequencial_message_passer
 vsim_simple_dual_port_b_ram = work/simple_dual_port_b_ram
+vsim_simple_dual_port_dist_ram = work/simple_dual_port_dist_ram
 vsim_std_fifo = work/std_fifo
 vsim_different_widths_fifo = work/different_widths_fifo
 vsim_bps_master = work/bps_master
 vsim_bps_master_tb = work/bps_master_tb
-all : work $(vsim_b_ram) $(vsim_bps) $(vsim_bps_tb) $(vsim_sequencial_message_passer) $(vsim_simple_dual_port_b_ram) $(vsim_std_fifo) $(vsim_different_widths_fifo) $(vsim_bps_master) $(vsim_bps_master_tb)
+all : work $(vsim_b_ram) $(vsim_bps) $(vsim_bps_tb) $(vsim_sequencial_message_passer) $(vsim_simple_dual_port_b_ram) $(vsim_std_fifo) $(vsim_different_widths_fifo) $(vsim_bps_master) $(vsim_bps_master_tb) $(vsim_simple_dual_port_dist_ram)
+#$(vsim_bps_xst_tb)
 
 work :
 	vlib work
@@ -24,6 +27,9 @@ $(vsim_bps) : bps.v
 $(vsim_bps_tb) : bps_tb.v
 	vlog -work work bps_tb.v +incdir+../.
 
+$(vsim_bps_xst_tb) : bps_xst_tb.v
+	vlog -work work bps_xst_tb.v +incdir+../.
+
 $(vsim_sequencial_message_passer) : ../sequencial_message_passer/sequencial_message_passer.v
 	vlog -work work ../sequencial_message_passer/sequencial_message_passer.v +incdir+../.
 
@@ -39,6 +45,9 @@ $(vsim_bps_master) : bps_master.v
 $(vsim_bps_master_tb) : bps_master_tb.v
 	vlog -work work bps_master_tb.v
 
+$(vsim_simple_dual_port_dist_ram) : ../different_widths_fifo/simple_dual_port_dist_ram.v
+	vlog -work work ../different_widths_fifo/simple_dual_port_dist_ram.v
+
 vsim_master :
 	vsim < test_master.do > vsim.out
 
@@ -47,6 +56,13 @@ vsim :
 
 xst :
 	xst < bps.xst > xst.out
+
+xst_vsim : work $(vsim_bps_tb) 
+	xst < bps.xst > xst.out
+	ngdbuild bps.ngc
+	netgen -w -ofmt vhdl bps.ngd bps_xst.vhd
+	vcom -work work bps_xst.vhd
+	vsim < test_xst.do > vsim.out
 
 clean :
 	rm -rf work *.lso *.ngc *.xrpt out transcript *.out _xmsgs xst

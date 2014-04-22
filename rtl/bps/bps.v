@@ -53,6 +53,7 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
     `define STORE_STATE 6
     `define STORE_UP_STATE 7
     `define INIT_UP_STATE 8
+    `define INIT_DOWN_STATE 9
     reg [63:0] data_pointer;
     reg [63:0] message_pointer;
     reg [63:0] assignments_pointer;
@@ -84,7 +85,6 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
         data_pointer <= addr_base_reg + 8*5;
         message_pointer <= data_pointer + 2 * 8 * FIELD_WIDTH * FIELD_HEIGHT;
         assignments_pointer <= message_pointer + 2 * 4 * 8 * FIELD_WIDTH * FIELD_HEIGHT;
-        
     end
     assign mc_rsp_stall = 0;
     reg [63:0] addr_reg;
@@ -122,7 +122,7 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
     reg output_fifo_pop;
     reg r_output_fifo_push, next_r_output_fifo_push;
     wire [63:0] output_fifo_q;
-    reg [127:0] r_output_fifo_d, next_r_output_fifo_d;
+    reg [127:0] r_output_fifo_d, next_r_output_fifo_d, inter_next_r_output_fifo_d;
     wire output_fifo_full;
     wire output_fifo_empty;
     wire [5:0] output_fifo_count;
@@ -135,8 +135,9 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
     different_widths_fifo #(128, 64, 5, 1, 4) output_fifo(rst, clk, r_output_fifo_push, output_fifo_pop, r_output_fifo_d, output_fifo_q, output_fifo_full, output_fifo_empty, output_fifo_count, output_fifo_almost_empty, output_fifo_almost_full);
     different_widths_fifo #(48 * 2, 48, 5, 1, 4) output_address_fifo(rst, clk, r_output_fifo_push, output_fifo_pop, r_output_address_fifo_d, output_address_fifo_q, , , , , );
     integer i;
-    wire [47:0] current_pointer_plus_one;
-    assign current_pointer_plus_one = current_pointer + 8;
+    reg [47:0] current_pointer_plus_one;
+    always @*
+        current_pointer_plus_one <= current_pointer + 8;
     wire [MEMORY_ADDR_WIDTH:0] horizontal_message_memory_addr_buffer_0;
     wire [MEMORY_ADDR_WIDTH:0] horizontal_message_memory_addr_buffer_1;
     assign horizontal_message_memory_addr_buffer_0 = horizontal_message_memory_addr_buffer[0];
@@ -198,15 +199,15 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
             next_state = `IDLE_STATE;
             next_current_pointer = 0;
             next_debug2 = 0;
-            next_push_debug[2] = 0;
-            next_push_debug[1] = 0;
+            next_push_debug[2] = 1;
+            next_push_debug[1] = 1;
             next_debug1 = 42;
-            next_push_debug[3] = 0;
-            next_push_debug[4] = 0;
+            next_push_debug[3] = 1;
+            next_push_debug[4] = 1;
             next_debug3 = 42;
             next_debug4 = 42;
             next_debug5 = 42;
-            next_push_debug[5] = 0;
+            next_push_debug[5] = 1;
         end else begin
             case(state)
                 `IDLE_STATE: begin
@@ -233,7 +234,7 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
                         next_vertical_message_memory_addr_a = 0;
                         next_horizontal_message_memory_addr_b = 0;
                         next_horizontal_message_memory_addr_a = 0;
-                        next_state = `DOWN_STATE;
+                        next_state = `INIT_DOWN_STATE;
                         next_active_lines = 1;
                         next_line = 0;
                         next_counter = 0;
@@ -283,6 +284,19 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
                     end
 
                 end
+                `INIT_DOWN_STATE: begin
+                    next_line = line + 1;
+                    phase_addr_in = (line) * FIELD_WIDTH;
+                    phase_addr_wr = 1;
+                    if(line == 7) begin
+                        next_state = `DOWN_STATE;
+                        next_active_lines = 1;
+                        next_counter = 0;
+                        phase_addr_wr = 0;
+                    end
+                    else
+                        next_state = `INIT_DOWN_STATE;
+                end
                 `DOWN_STATE: begin
                     next_data_memory_addr = phase_addr_out;
                     next_vertical_message_memory_addr_b = phase_addr_out;
@@ -301,11 +315,12 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
                     end
                     if(counter == 8*8)
                         next_state = `IDLE_STATE;
-                    if((phase_addr_out + 1) % FIELD_WIDTH)
+                    //TODO: change from phase_addr_out to buffer_1
+                    if((horizontal_message_memory_addr_buffer_0 + 1) % FIELD_WIDTH)
                         next_smp_horizontal_message_forward = smp_horizontal_out;
                     else
                         next_smp_horizontal_message_forward = 0;
-                    if(phase_addr_out < FIELD_WIDTH)
+                    if(vertical_message_memory_addr_buffer_0 < FIELD_WIDTH)
                         next_smp_vertical_message_forward = 0;
                     else
                         next_smp_vertical_message_forward = up_in;
@@ -327,9 +342,11 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
                     next_horizontal_message_memory_addr_buffer[0] = horizontal_message_memory_addr_b;
                     next_horizontal_message_memory_addr_a = horizontal_message_memory_addr_buffer_1;
 
+                    next_horizontal_message_memory_write = smp_push;
                     if((next_horizontal_message_memory_addr_a) % FIELD_WIDTH)
-                        next_horizontal_message_memory_write = smp_push;
-                    next_horizontal_message_memory_d_in = smp_horizontal_out;
+                        next_horizontal_message_memory_d_in = smp_horizontal_out;
+                    else
+                        next_horizontal_message_memory_d_in = 0;
                     
                     next_vertical_message_memory_write = smp_push; //valid || (counter == 12);
                     //print when address is 5
@@ -435,43 +452,51 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
                         case(counter)
                             0:begin
                                 for(i = 0; i < 16; i = i + 1) begin
-                                    next_r_output_fifo_d[(i+1)*8-1 -:8] = {2'H0, horizontal_message_memory_d_out[(i+1)*6 - 1 -:6]};
+                                    inter_next_r_output_fifo_d[(i+1)*8-1 -:8] = {2'H0, horizontal_message_memory_d_out[(i+1)*6 - 1 -:6]};
                                 end
+                                next_r_output_fifo_d = inter_next_r_output_fifo_d;
                                 next_r_output_fifo_push = 1;
                                 next_current_pointer = current_pointer + 8 * 4;
                                 next_r_output_address_fifo_d[48*2-1 : 48] = current_pointer_plus_one;
                                 next_r_output_address_fifo_d[47:0] = current_pointer;
-                                next_mc_req_st = 1;
-                                next_mc_req_vadr = current_pointer;
                                 for(i = 0; i < 8; i = i + 1) begin
                                     inter_next_mc_req_wrd_rdctl[(i+1)*8-1 -:8] = {2'H0, horizontal_message_memory_d_out[(i+1)*6 - 1 -:6]};
                                 end
-                                if(inter_next_mc_req_wrd_rdctl == 0)
-                                    next_mc_req_wrd_rdctl = 42;
-                                else
-                                    next_mc_req_wrd_rdctl = inter_next_mc_req_wrd_rdctl;
+                                /*next_mc_req_wrd_rdctl = inter_next_mc_req_wrd_rdctl;
+                                next_mc_req_st = 1;
+                                next_mc_req_vadr = current_pointer;*/
                             end
                             1:begin
-                                for(i = 0; i < 16; i = i + 1) begin
-                                    next_r_output_fifo_d[(i+1)*8-1 -:8] = {2'H0, vertical_message_memory_d_out[(i+1)*6 - 1 -:6]};
+                                for(i = 0; i < 8; i = i + 1) begin
+                                    inter_next_mc_req_wrd_rdctl[(i+1)*8-1 -:8] = {2'H0, horizontal_message_memory_d_out[(i+1 + 8)*6 - 1 -:6]};
                                 end
+                                /*next_mc_req_wrd_rdctl = inter_next_mc_req_wrd_rdctl;
+                                next_mc_req_st = 1;
+                                next_mc_req_vadr = current_pointer_plus_one;*/
+                            end
+                            2:begin
+                                for(i = 0; i < 16; i = i + 1) begin
+                                    inter_next_r_output_fifo_d[(i+1)*8-1 -:8] = {2'H0, vertical_message_memory_d_out[(i+1)*6 - 1 -:6]};
+                                end
+                                next_r_output_fifo_d = inter_next_r_output_fifo_d;
                                 next_r_output_fifo_push = 1;
                                 next_current_pointer = current_pointer + 8 * 4;
                                 next_r_output_address_fifo_d[48*2-1 : 48] = current_pointer_plus_one;
                                 next_r_output_address_fifo_d[47:0] = current_pointer;
-                                next_mc_req_st = 1;
-                                next_mc_req_vadr = current_pointer;
                                 for(i = 0; i < 8; i = i + 1) begin
-                                    inter_next_mc_req_wrd_rdctl[(i+1)*8-1 -:8] = {2'H0, horizontal_message_memory_d_out[(i+1)*6 - 1 -:6]};
+                                    inter_next_mc_req_wrd_rdctl [(i+1)*8-1 -:8] = {2'H0, vertical_message_memory_d_out[(i+1)*6 - 1 -:6]};
                                 end
-                                if(inter_next_mc_req_wrd_rdctl == 0)
-                                    next_mc_req_wrd_rdctl = 42;
-                                else
-                                    next_mc_req_wrd_rdctl = inter_next_mc_req_wrd_rdctl;
-                            end
-                            2:begin
+                                /*next_mc_req_wrd_rdctl = inter_next_mc_req_wrd_rdctl;
+                                next_mc_req_st = 1;
+                                next_mc_req_vadr = current_pointer;*/
                             end
                             3:begin
+                                for(i = 0; i < 8; i = i + 1) begin
+                                    inter_next_mc_req_wrd_rdctl[(i+1)*8-1 -:8] = {2'H0, vertical_message_memory_d_out[(i+1 + 8)*6 - 1 -:6]};
+                                end
+                                /*next_mc_req_wrd_rdctl = inter_next_mc_req_wrd_rdctl;
+                                next_mc_req_st = 1;
+                                next_mc_req_vadr = current_pointer_plus_one;*/
                             end
                             default:begin
                             end
@@ -486,10 +511,10 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
                         next_debug4 = current_pointer;
                     end
                     if(output_fifo_valid) begin
-                        //next_mc_req_wrd_rdctl = output_fifo_q;
+                        next_mc_req_wrd_rdctl = output_fifo_q;
                         if(output_address_fifo_q >= message_pointer && output_address_fifo_q < assignments_pointer)begin
-                            //next_mc_req_st = 1;
-                            //next_mc_req_vadr = output_address_fifo_q;
+                            next_mc_req_st = 1;
+                            next_mc_req_vadr = output_address_fifo_q;
                         end else begin
                             next_push_debug[1] = 1;
                             next_debug1 = output_address_fifo_q;
@@ -586,7 +611,7 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
         if(state == `INIT_UP_STATE) begin
             $display("INIT_UP_STATE: %d", $time);
         end
-        if(state == `UP_STATE) begin
+        if(state == `DOWN_STATE) begin
             $display("up state time: %d", $time);
             if(vertical_message_memory_addr_a == 4)
                 $display("vertical_message_memory_addr_b=5, counter = %d", counter);
@@ -600,6 +625,7 @@ module bps(rst, clk, stall, opcode, addr_base, mc_req_ld, mc_req_st, mc_req_vadr
                 $display("writing vertical memory: %H at %H", vertical_message_memory_d_in, vertical_message_memory_addr_a);
             if(smp_valid)begin
                 $display("smp_horizontal_out: %H", smp_horizontal_out);
+                $display("smp_vertical_out: %H", smp_vertical_out);
             end
             if(active_lines[line]) begin
                 $display("address: %H", phase_addr_out);

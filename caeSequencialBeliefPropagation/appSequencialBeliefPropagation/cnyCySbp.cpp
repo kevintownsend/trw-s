@@ -43,7 +43,7 @@ enum DIRECTION {LEFT, RIGHT, UP, DOWN, DATA};
 
 typedef unsigned int TYPE;
 
-#define OVERLAP 8
+#define OVERLAP 16
 
 #define MAX_NUM -1 
 
@@ -112,7 +112,10 @@ int main(int argc, char* argv[]) {
 
     // This loop is where LBP is performed.
     // Runtime measurement starts here
-    int runs = 40;
+
+    int runs = 100;
+    cout << "runs:";
+    cin >> runs;
     int fpSize = 5 * 8 + 16 * 128 * 128 + 16 * 4 * 128 * 128 + 128 * 128;
 
     FieldPackage* cnyFp = (FieldPackage*)cny_cp_malloc(hSplits * vSplits * fpSize);
@@ -123,6 +126,7 @@ int main(int argc, char* argv[]) {
     //stealTardis();
     uint64_t cnyAddress = (uint64_t)cnyFp;
     stealTardis();
+    if(false)
     for(int h = 0; h < hSplits * vSplits; h++){
         copcall_fmt(sig, bpsAll, "AA", cnyAddress, (uint64_t)(runs));
         cnyAddress += fpSize;
@@ -181,8 +185,20 @@ int main(int argc, char* argv[]) {
     energy = MAP(mrf);
 
     cout <<  "energy = " << energy << endl;
+    cout << "runs:";
+    cin >> runs;
+    for(int i = 0; i < runs; i++)
+        trws(mrf);
 
-    WriteResultsRaw("output_labels.txt", resizedMrf);
+    InitGraph("vdata_in.txt", mrf);
+    for(int i = 0; i < runs; i++)
+        trws(mrf);
+    energy = MAP(mrf);
+
+    cout <<  "energy = " << energy << endl;
+
+    WriteResultsRaw("output_labels_raw.txt", resizedMrf);
+    WriteResults("output_labels.txt",mrf);
 
     return 0;
 }

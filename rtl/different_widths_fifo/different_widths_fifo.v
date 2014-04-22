@@ -1,4 +1,3 @@
-`timescale 1ns/1ps
 module different_widths_fifo(rst, clk, push, pop, d, q, full, empty, count, almost_empty, almost_full);
     parameter INPUT_WIDTH = 8;
     parameter OUTPUT_WIDTH = 4;

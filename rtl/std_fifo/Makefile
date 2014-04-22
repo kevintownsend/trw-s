@@ -32,5 +32,10 @@ check : whole_library
 xst :
 	xst < std_fifo.xst > xst.out
 
+xst_vsim : xst
+	netgen -w -ofmt verilog std_fifo.ngc std_fifo_xst.v
+	vlog -work work std_fifo_xst.v -L unisim
+	vsim < test.do > vsim.out
+
 clean : 
 	rm -rf work *.lso *.ngc *.xrpt *.srp transcript *.wlf _xmsgs xst *.out

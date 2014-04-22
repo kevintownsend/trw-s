@@ -1,12 +1,12 @@
 #include <iostream>
-#include <vector>
+//#include <vector>
 #include <string>
 #include <cstdio>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdint.h>
-#include <cmath>
-#include <climits>
+#include <math.h>
+#include <limits.h>
 #include "tardis.h"
 using namespace std;
 
@@ -17,7 +17,10 @@ typedef unsigned int TYPE;
 
 #define MAX_NUM -1 
 
-const int BP_ITERATIONS = 40;
+#define HSPLITS 1
+#define VSPLITS 1
+
+const int BP_ITERATIONS = 20;
 const int LABELS = 16;
 const int LAMBDA = 16;
 const int SMOOTHNESS_TRUNC = 2;
@@ -65,8 +68,8 @@ int main(int argc, char* argv[]) {
     char buffer[100];
 
     InitGraph("vdata_in.txt", mrf);
-    Field fields[2*2];
-    splitGraph(mrf, 2, 2, fields);
+    Field fields[VSPLITS*HSPLITS];
+    splitGraph(mrf, VSPLITS, HSPLITS, fields);
     // ------------------------------------------------------
     // FOR THE CONTEST, START IMPLEMENTATION HERE 
 
@@ -76,7 +79,7 @@ int main(int argc, char* argv[]) {
     // Runtime measurement starts here
     stealTardis();
     #pragma omp parallel for
-    for(int h = 0; h < 2*2; h++){
+    for(int h = 0; h < VSPLITS*HSPLITS; h++){
         for(int i=0; i < BP_ITERATIONS; i++) {
             cout << "Iteration: " << i << endl;
 
@@ -92,14 +95,14 @@ int main(int argc, char* argv[]) {
 
     // FOR THE CONTEST, END IMPLEMENTATION HERE 
     // ------------------------------------------------------
-    for(int i = 0; i < 2*2; i++){
+    for(int i = 0; i < VSPLITS*HSPLITS; i++){
         cerr << "cycle : " << i << endl;
         MAP(fields[i]);
         cerr << "map " << endl;
         sprintf(buffer,"%d",i);
         WriteResultsRaw((string("section") + string(buffer)).c_str(),fields[i]);
     }
-    mergeGraph(mrf, 2, 2, fields);
+    mergeGraph(mrf, VSPLITS, HSPLITS, fields);
     // Assign labels 
     TYPE energy = MAP(mrf);
     

@@ -4,7 +4,7 @@ module simple_dual_port_dist_ram(clk, d_in, d_out, wr_en, addr_a, addr_b);
     parameter DEPTH = 1<<ADDR_WIDTH;
     input clk;
     input [WIDTH-1:0] d_in;
-    output reg [WIDTH-1:0] d_out;
+    output [WIDTH-1:0] d_out;
     input wr_en;
     input [ADDR_WIDTH-1:0] addr_a;
     input [ADDR_WIDTH-1:0] addr_b;
@@ -15,6 +15,5 @@ module simple_dual_port_dist_ram(clk, d_in, d_out, wr_en, addr_a, addr_b);
         if(wr_en)
             ram[addr_a] <= d_in;
     end
-    always @*
-        d_out <= ram[addr_b];
+    assign d_out = ram[addr_b];
 endmodule

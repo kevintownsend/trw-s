@@ -39,6 +39,9 @@ int main(int argc, char *argv[])
     else if (argc != 1)
         return 0;
 
+    //set runs
+    int runs = 40;
+
   // Get personality signature
   // The "pdk" personality is the PDK sample vadd personality
   cny_image_t        sig2;
@@ -78,7 +81,6 @@ int main(int argc, char *argv[])
     initialMemory.close();
     //TODO: move image to coprocessor
     //TODO: option for coprocessor or local
-    int runs = 2;
     if(COPROCESSOR == 1){
     FieldPackage* cnyFp = (FieldPackage*)cny_cp_malloc(size);
     cny_cp_memcpy(cnyFp, fp, size);

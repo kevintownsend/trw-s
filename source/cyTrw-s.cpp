@@ -9,12 +9,15 @@
 #include <climits>
 #include "tardis.h"
 #include "trw-s.h"
+//#include "bp.h"
 using namespace std;
 
 
 enum DIRECTION {LEFT, RIGHT, UP, DOWN, DATA};
 
 typedef unsigned int TYPE;
+
+#define OVERLAP 16
 
 #define MAX_NUM -1 
 
@@ -24,6 +27,8 @@ const int SMOOTHNESS_TRUNC = 2;
 const int BORDER_SZ = 18;
 
 
+FieldPackage* resizeGraph(Field *mrf, int* hSplits, int* vSplits, Field* newMrf);
+void resizeBack(Field *mrf, Field *newMrf);
 FieldPackage* InitGraph(const char* vdata_file, Field &mrf); 
 FieldPackage* splitGraph(Field mrf, int hSplits, int vSplits, Field* fields);
 void mergeGraph(Field mrf, int hSplits, int vSplits, Field* fields);
@@ -37,10 +42,24 @@ void BP(Field mrf, DIRECTION direction, int iteration);
 int main(int argc, char* argv[]) {
     Field mrf;
     char buffer[100];
-
-    InitGraph("vdata_in.txt", mrf);
-    Field fields[2*2];
-    splitGraph(mrf, 2, 2, fields);
+    if(argc == 1)
+        InitGraph("vdata_in.txt", mrf);
+    else if(argc == 2)
+        InitGraph(argv[1],mrf);
+    MAP(mrf);
+    WriteResultsRaw("first_raw_input",mrf);
+    int hSplits, vSplits;
+    Field resizedMrf;
+    resizeGraph(&mrf, &hSplits, &vSplits, &resizedMrf);
+    MAP(resizedMrf);
+    WriteResultsRaw("raw_input",resizedMrf);
+    Field fields[hSplits*vSplits];
+    cout << "split graph" << hSplits << ", " << vSplits << endl;
+    splitGraph(resizedMrf, hSplits, vSplits, fields);
+    for(int i = 0; i < hSplits*vSplits; i++){
+        cout << "field: " << i << endl;
+        cout << fields[i].width << ", " << fields[i].height << endl;
+    }
     // ------------------------------------------------------
     // FOR THE CONTEST, START IMPLEMENTATION HERE 
 
@@ -48,10 +67,14 @@ int main(int argc, char* argv[]) {
 
     // This loop is where LBP is performed.
     // Runtime measurement starts here
+    cout << "starting bps" << endl;
     stealTardis();
-    #pragma omp parallel for
-    for(int h = 0; h < 2*2; h++){
-        for(int i=0; i < 20; i++) {
+    int runs = 40;
+    cout << "runs:";
+    cin >> runs;
+    //#pragma omp parallel for
+    for(int h = 0; h < hSplits * vSplits; h++){
+        for(int i=0; i < runs; i++) {
             cout << "Iteration: " << i << endl;
 
             //TODO: print each iteration
@@ -63,7 +86,7 @@ int main(int argc, char* argv[]) {
 
     // FOR THE CONTEST, END IMPLEMENTATION HERE 
     // ------------------------------------------------------
-    for(int i = 0; i < 2*2; i++){
+    for(int i = 0; i < hSplits * vSplits; i++){
         cerr << "cycle : " << i << endl;
         MAP(fields[i]);
         cerr << "map " << endl;
@@ -71,13 +94,45 @@ int main(int argc, char* argv[]) {
         WriteResultsRaw((string("section") + string(buffer)).c_str(),fields[i]);
     }
     
-    mergeGraph(mrf, 2, 2, fields);
+    mergeGraph(resizedMrf, hSplits, vSplits, fields);
 
     // Assign labels 
-    TYPE energy = MAP(mrf);
-    
+    TYPE energy = MAP(resizedMrf);
+
     cout <<  "energy = " << energy << endl;
 
+    resizeBack(&mrf, &resizedMrf);
+    energy = MAP(mrf);
+
+    cout <<  "energy = " << energy << endl;
+    WriteResultsRaw("output_labels_raw.txt", resizedMrf);
+    //InitGraph("vdata_in.txt", mrf);
+    cout << "runs:";
+    cin >> runs;
+    stealTardis();
+    for(int i = 0; i < runs; i++)
+        trws(mrf);
+    returnTardis();
+    energy = MAP(mrf);
+    cout <<  "energy = " << energy << endl;
+    cout << "runs:";
+    cin >> runs;
+    for(int i = 0; i < runs; i++){
+        BP(mrf, LEFT, i);
+        BP(mrf, RIGHT, i);
+        BP(mrf, UP, i);
+        BP(mrf, DOWN, i);
+    }
+    energy = MAP(mrf);
+    cout <<  "energy = " << energy << endl;
+    cout << "runs:";
+    cin >> runs;
+    stealTardis();
+    for(int i = 0; i < runs; i++)
+        trws(mrf);
+    returnTardis();
+    energy = MAP(mrf);
+    cout <<  "energy = " << energy << endl;
     WriteResults("output_labels.txt", mrf);
 
     return 0;
@@ -166,8 +221,168 @@ FieldPackage* InitGraph(const char* vdata_file, Field &mrf) {
     fclose(fp);
     return fieldPackage;
 }
+
+FieldPackage* resizeGraph(Field* mrf, int* hSplits, int* vSplits, Field* destMrf){
+    const int overlap = OVERLAP;
+    cout << "Resizing graph" << endl;
+    cout << mrf->width << endl;
+    cout << mrf->height << endl;
+    int inWidth = mrf->width;
+    int inHeight = mrf->height;
+    int tmp = (inWidth - 2 * overlap) / (128 - 2 * overlap);
+    if((inWidth - 2 * overlap) / (128 - 2 * overlap))
+        tmp++;
+    *vSplits = tmp;
+    int newWidth = tmp * (128 - 2 * overlap) + 2 * overlap;
+    tmp = (inHeight - 2 * overlap) / (128 - 2 * overlap);
+    if((inHeight - 2 * overlap) / (128 - 2 * overlap))
+        tmp++;
+    *hSplits = tmp;
+    int newHeight = tmp * (128 - 2 * overlap) + 2 * overlap;
+    cout << "New dimensions: " << newWidth << ", " << newHeight << endl;
+    int pixelCount = newWidth * newHeight;
+    int newSize = sizeof(FieldPackage) + pixelCount*(sizeof(label_t) + sizeof(Node)) + pixelCount;
+    FieldPackage* fp = (FieldPackage*)malloc(newSize);
+    fp->width = newWidth;
+    fp->height = newHeight;
+    fp->data = sizeof(FieldPackage);
+    fp->array = fp->data + sizeof(label_t) * pixelCount;
+    fp->assignment = fp->array + pixelCount * sizeof(Node);
+    fp->size = newSize;
+    destMrf->width = newWidth;
+    destMrf->height = newHeight;
+    destMrf->data = (label_t*)((uint8_t*)fp + fp->data);
+    destMrf->array = (Node*)((uint8_t*)fp + fp->array);
+    destMrf->assignment = (uint8_t*)((uint8_t*)fp + fp->assignment);
+    for(int i = 0; i < newHeight; i++){
+        for(int j = 0; j < newWidth; j++){
+            int newIndex = i * newWidth + j;
+            int oldIndex = i * inWidth + j;
+            if(i < inHeight && j < inWidth){
+                for(int k = 0; k < 16; k++){
+                    destMrf->data[newIndex][k] = mrf->data[oldIndex][k];
+                    /*
+                    destMrf->array[newIndex].left[k] = mrf->data[oldIndex][k];
+                    destMrf->array[newIndex].right[k] = mrf->data[oldIndex][k];
+                    destMrf->array[newIndex].up[k] = mrf->data[oldIndex][k];
+                    destMrf->array[newIndex].down[k] = mrf->data[oldIndex][k];*/
+                }
+            }else{
+                for(int k = 0; k < 16; k++){
+                    destMrf->data[newIndex][k] = 0;
+                    destMrf->array[newIndex].left[k] = 0;
+                    destMrf->array[newIndex].right[k] = 0;
+                    destMrf->array[newIndex].up[k] = 0;
+                    destMrf->array[newIndex].down[k] = 0;
+                }
+            }
+        }
+    }
+
+
+    //TODO: calculate new size
+}
+void resizeBack(Field *mrf, Field *newMrf){
+    int newHeight = newMrf->height;
+    int newWidth = newMrf->width;
+    int inHeight = mrf->height;
+    int inWidth = mrf->width;
+    for(int i = 0; i < newHeight; i++){
+        for(int j = 0; j < newWidth; j++){
+            int newIndex = i * newWidth + j;
+            int oldIndex = i * inWidth + j;
+            if(i < inHeight && j < inWidth){
+                for(int k = 0; k < 16; k++){
+                    mrf->data[oldIndex][k] = newMrf->data[newIndex][k];
+                    mrf->array[oldIndex].left[k] = newMrf->array[newIndex].left[k];
+                    mrf->array[oldIndex].right[k] = newMrf->array[newIndex].right[k];
+                    mrf->array[oldIndex].up[k] = newMrf->array[newIndex].up[k];
+                    mrf->array[oldIndex].down[k] = newMrf->array[newIndex].down[k];
+                }
+            }else{
+            }
+        }
+    }
+}
+
 FieldPackage* splitGraph(Field mrf, int hSplits, int vSplits, Field* fields){
-    const int overlap = 4;
+    const int overlap = OVERLAP;
+    int hCuts[hSplits+1];
+    int vCuts[vSplits+1];
+    hCuts[0] = overlap;
+    hCuts[hSplits] = mrf.height- overlap;
+    //fields = (Field*) malloc(sizeof(Field) * hSplits * vSplits);
+    for(int i = 1; i < hSplits; i++){
+        hCuts[i] = (mrf.height - 2 * overlap) * i / hSplits + overlap;
+    }
+    vCuts[0] = overlap;
+    vCuts[vSplits] = mrf.width- overlap;
+    for(int i = 1; i < vSplits; i++){
+        vCuts[i] = (mrf.width - 2 * overlap) * i / vSplits + overlap;
+    }
+    int totalSize = 0;
+    for(int i = 0; i < hSplits; i++){
+        int height= hCuts[i+1] - hCuts[i] + overlap*2;
+        for(int j = 0; j < vSplits; j++){
+            //TODO: allocate Field package
+            int width = vCuts[j+1] - vCuts[j] + overlap*2;
+            int pixelCount = height*width;
+            totalSize += sizeof(FieldPackage) + pixelCount*(sizeof(label_t) + sizeof(Node)) + pixelCount;
+        }
+    }
+    uint8_t* memory = (uint8_t*)malloc(totalSize);
+    uint32_t currentLocation  = 0;
+    for(int i = 0; i < hSplits; i++){
+        int height = hCuts[i+1] - hCuts[i] + overlap*2;
+        for(int j = 0; j < vSplits; j++){
+            //TODO: allocate Field package
+            int currentField = i * vSplits + j;
+            uint32_t subLocation = 0;
+            int width = vCuts[j+1] - vCuts[j] + overlap*2;
+            int pixelCount = height*width;
+            FieldPackage* fp = (FieldPackage*)(memory + currentLocation);
+            fp->height = height;
+            fp->width = width;
+            fields[currentField].height = height;
+            fields[currentField].width = width;
+            cerr << "height:" << height << endl;
+            cerr << "width:" << width << endl;
+            subLocation = sizeof(FieldPackage);
+            fp->data = subLocation;
+            //TODO: setup fields first
+            subLocation += pixelCount*sizeof(label_t);
+            fp->array = subLocation;
+            subLocation += pixelCount*sizeof(Node);
+            fp->assignment = subLocation;
+            subLocation += pixelCount;
+            fp->size = subLocation;
+            fields[currentField].data = (label_t*)(memory+currentLocation+fp->data);
+            fields[currentField].array = (Node*)(memory+currentLocation+fp->array);
+            fields[currentField].assignment = (uint8_t*)(memory+currentLocation+fp->assignment);
+            int counter = 0;
+            for(int k = hCuts[i] - overlap; k < hCuts[i+1] + overlap; k++){
+                for(int l = vCuts[j] - overlap; l < vCuts[j+1] + overlap; l++){
+                    int tmp = l + k * mrf.width;
+                    for(int m = 0; m < LABELS; m++){
+                        fields[currentField].data[counter][m] = mrf.data[tmp][m];
+                        fields[currentField].array[counter].left[m] = mrf.array[tmp].left[m];
+                        fields[currentField].array[counter].right[m] = mrf.array[tmp].right[m];
+                        fields[currentField].array[counter].up[m] = mrf.array[tmp].up[m];
+                        fields[currentField].array[counter].down[m] = mrf.array[tmp].down[m];
+                    }
+                    fields[currentField].assignment[counter] = 0;
+                    counter++;
+                }
+            }
+            currentLocation += subLocation;
+        }
+    }
+    return (FieldPackage*)memory;
+}
+FieldPackage* splitGraph128x128Blocks(Field mrf, int* hSplits, int* vSplits, Field* fields){
+    const int overlap = OVERLAP;
+    //TODO:
+    /*
     int hCuts[hSplits+1];
     int vCuts[vSplits+1];
     hCuts[0] = overlap;
@@ -240,21 +455,22 @@ FieldPackage* splitGraph(Field mrf, int hSplits, int vSplits, Field* fields){
         }
     }
     return (FieldPackage*)memory;
+    */
 }
 void mergeGraph(Field mrf, int hSplits, int vSplits, Field* fields){
-    const int overlap = 4;
+    const int overlap = OVERLAP;
     int hCuts[hSplits+1];
     int vCuts[vSplits+1];
     hCuts[0] = overlap;
     hCuts[hSplits] = mrf.height - overlap;
     //fields = (Field*) malloc(sizeof(Field) * hSplits * vSplits);
     for(int i = 1; i < hSplits; i++){
-        hCuts[i] = mrf.height* i / hSplits;
+        hCuts[i] = (mrf.height - 2 * overlap) * i / hSplits + overlap;
     }
     vCuts[0] = overlap;
     vCuts[vSplits] = mrf.width - overlap;
     for(int i = 1; i < vSplits; i++){
-        vCuts[i] = mrf.width * i / vSplits;
+        vCuts[i] = (mrf.width - 2 * overlap)  * i / vSplits + overlap;
     }
     int totalSize = 0;
     uint32_t currentLocation  = 0;
@@ -288,10 +504,18 @@ void mergeGraph(Field mrf, int hSplits, int vSplits, Field* fields){
             }else{
                 sourceDown = height - overlap;
             }
-            destLeft = globalWidth * j / vSplits;
-            destRight = globalWidth * (j+1) / vSplits;
-            destTop = globalHeight * i / hSplits;
-            destDown = globalHeight * (i+1) / hSplits;
+            destLeft = (globalWidth - 2 * overlap) * j / vSplits + overlap;
+            destRight = (globalWidth - 2 * overlap) * (j+1) / vSplits + overlap;
+            destTop = (globalHeight - 2 * overlap) * i / hSplits + overlap;
+            destDown = (globalHeight - 2 * overlap) * (i+1) / hSplits + overlap;
+            if(j == 0)
+                destLeft = 0;
+            if(j == vSplits - 1)
+                destRight = globalWidth;
+            if(i == 0)
+                destTop = 0;
+            if(i == hSplits)
+                destDown = globalHeight;
             //TODO: dest
             int sourceX, sourceY, sourceIndex;
             sourceY = sourceTop;

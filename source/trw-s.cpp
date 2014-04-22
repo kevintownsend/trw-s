@@ -16,6 +16,8 @@ void trws(Field mrf){
                 int sum = mrf.data[index][k]*SCALE + mrf.array[index].left[k] + 
                     mrf.array[index].right[k] + mrf.array[index].up[k] + mrf.array[index].down[k];
                 //TODO: down message
+                if(sum >255)
+                    sum = 255;
                 int tmp = sum*FRAC - mrf.array[index].down[k]*FRAC;
                 if(tmp <0)
                     tmp = 0;
@@ -54,6 +56,8 @@ void trws(Field mrf){
                 int sum = mrf.data[index][k]*SCALE + mrf.array[index].right[k] + 
                     mrf.array[index].left[k] + mrf.array[index].down[k] + mrf.array[index].up[k];
                 //TODO: up message
+                if(sum >255)
+                    sum = 255;
                 int tmp = sum*FRAC - mrf.array[index].up[k]*FRAC;
                 if(tmp <0)
                     tmp = 0;

@@ -1,0 +1,11 @@
+#!/usr/bin/python
+from math import *
+for i in range(16):
+    if(i%2):
+        e_o = "o"
+    else:
+        e_o = "e"
+    tmp = floor(i/2)
+    print("    bps #(128, 8, 16, " + repr(i) + ") bps" + repr(i) + "(reset_tree[3], clk_per, bps_stall_v[" + repr(i) + "], bps_opcode, w_aeg[0], mc" + repr(tmp) + "_req_ld_" + e_o + ", mc" + repr(tmp) + "_req_st_" + e_o + ", mc" + repr(tmp) + "_req_vadr_" + e_o + ", mc" + repr(tmp) + "_req_wrd_rdctl_" + e_o + ", mc" + repr(tmp) + "_rd_rq_stall_" + e_o + " || mc" + repr(tmp) + "_wr_rq_stall_" + e_o + ", mc" + repr(tmp) + "_rsp_rdctl_" + e_o + ", mc" + repr(tmp) + "_rsp_data_" + e_o + ", mc" + repr(tmp) + "_rsp_push_" + e_o + ", mc" + repr(tmp) + "_rsp_stall_" + e_o + ", up_in_v[" + repr(i) + "], up_out_v[" + repr(i) + "], down_in_v[" + repr(i) + "], down_out_v[" + repr(i) + "], , , , , , , );")
+
+

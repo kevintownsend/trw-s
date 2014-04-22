@@ -6,6 +6,7 @@ LIB_WORK = work
 # Define path to each design unit
 WORK__different_widths_fifo_tb = $(LIB_WORK)/different_widths_fifo_tb/_primary.dat
 WORK__different_widths_fifo = $(LIB_WORK)/different_widths_fifo/_primary.dat
+vsim_simple_dual_port_dist_ram = work/simple_dual_port_dist_ram
 VCOM = vcom
 VLOG = vlog
 VOPT = vopt
@@ -17,7 +18,7 @@ $(LIB_WORK) :
 	vlib work
 
 whole_library :     $(WORK__different_widths_fifo_tb) \
-    $(WORK__different_widths_fifo)
+    $(WORK__different_widths_fifo) $(vsim_simple_dual_port_dist_ram)
 
 $(WORK__different_widths_fifo) \
 $(WORK__different_widths_fifo_tb) : different_widths_fifo_tb.v different_widths_fifo.v
@@ -25,9 +26,11 @@ $(WORK__different_widths_fifo_tb) : different_widths_fifo_tb.v different_widths_
 		 -L mtiUvm -L mtiUPF different_widths_fifo_tb.v \
 		 different_widths_fifo.v
 
+$(vsim_simple_dual_port_dist_ram) : simple_dual_port_dist_ram.v
+	vlog -work work simple_dual_port_dist_ram.v
 
 check : whole_library
-	vsim < test.do
+	vsim < test.do > vsim.out
 
 xst :
 	xst < different_widths_fifo.xst > xst.out

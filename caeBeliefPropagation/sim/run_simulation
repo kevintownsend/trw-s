@@ -1,3 +1,0 @@
-make sim CMDLINE_SIM_OPTIONS=+caehwsim_socket_port=$1
-#echo "make sim CMDLINE_SIM_OPTIONS=+caehwsim_socket_port=$1"
-

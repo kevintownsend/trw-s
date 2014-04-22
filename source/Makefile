@@ -1,4 +1,4 @@
-all : inputToPgm outputToPgm cyBeliefPropagation tardis.o cyTrw-s mrf.o
+all : inputToPgm outputToPgm cyBeliefPropagation tardis.o cyTrw-s mrf.o splitMergeCheck bp.o rotateVdataIn rotateTruth eval_sig fmrf.o
 
 inputToPgm : inputToPgm.cpp
 	g++ -o inputToPgm inputToPgm.cpp
@@ -7,7 +7,7 @@ outputToPgm : outputToPgm.cpp
 	g++ -o outputToPgm outputToPgm.cpp
 
 cyBeliefPropagation : cyBeliefPropagation.cpp tardis.o
-	g++ -fopenmp -lrt -O3 -o cyBeliefPropagation cyBeliefPropagation.cpp tardis.o
+	g++ -O3 -fopenmp -lrt -o cyBeliefPropagation cyBeliefPropagation.cpp tardis.o
 
 check :
 	time cyBeliefPropagation
@@ -21,10 +21,11 @@ tardis.o : tardis.cpp
 	g++ -c tardis.cpp
 
 trw-s.o : trw-s.cpp
-	g++ -c trw-s.cpp
+	g++ -O3 -c trw-s.cpp
 
 cyTrw-s : cyTrw-s.cpp trw-s.o tardis.o
-	g++ -fopenmp -lrt -o cyTrw-s cyTrw-s.cpp tardis.o trw-s.o
+	g++ -O3 -fopenmp -lrt -o cyTrw-s cyTrw-s.cpp tardis.o trw-s.o
+
 checkTrw :
 	time cyTrw-s
 	outputToPgm 148 196 < section0 > section0.pgm
@@ -35,6 +36,33 @@ checkTrw :
 
 mrf.o : mrf.cpp
 	g++ -c mrf.cpp
+
+fmrf.o : fmrf.cpp
+	g++ -c fmrf.cpp
+
+ftrws.o : ftwrs.cpp
+	g++ -c ftwrs.cpp
+
+splitMergeCheck : splitMergeCheck.cpp
+	g++ -O3 -lrt -o splitMergeCheck splitMergeCheck.cpp tardis.o trw-s.o
+
+check_smc :
+	splitMergeCheck
+
+bp.o : bp.cpp
+	g++ -c bp.cpp
+
+rotateVdataIn : rotateVdataIn.cpp
+	g++ -o rotateVdataIn rotateVdataIn.cpp
+
+checkRot :
+	rotateVdataIn < vdata_in.txt
+
+rotateTruth : rotateTruth.cpp
+	g++ -o rotateTruth rotateTruth.cpp
+
+eval_sig : eval_sig.cpp
+	g++ -o eval_sig eval_sig.cpp
 
 clean :
 	rm -rf inputToPgm outputToPgm cyBeliefPropagation cyTrw-s *.pgm *.o section*

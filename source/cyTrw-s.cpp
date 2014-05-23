@@ -551,6 +551,7 @@ void WriteResultsRaw(const char* edata_file, Field mrf) {
 
     // First line, write number of entries in file
     fprintf(fp, "%d\n", (mrf.width)*(mrf.height));
+    printf("file %s size %dx%d\n", edata_file, mrf.width, mrf.height);
 
      // Write label assignments 
     for(int y=0; y < mrf.height; y++) {
@@ -573,6 +574,7 @@ void WriteResults(const char* edata_file, Field mrf) {
     // First line, write number of entries in file
     fprintf(fp, "%d\n", (mrf.width-(BORDER_SZ*2))*(mrf.height-(BORDER_SZ*2)));
 
+    printf("file %s size %dx%d\n", edata_file, mrf.width-(BORDER_SZ*2), mrf.height-(BORDER_SZ*2));
      // Write label assignments 
     for(int y=BORDER_SZ; y < mrf.height-BORDER_SZ; y++) {
         for(int x=BORDER_SZ; x < mrf.width-BORDER_SZ; x++) { 
